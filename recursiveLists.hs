@@ -1,3 +1,5 @@
+import Data.List (foldl1')
+
 hamilton = 1:merge (merge (map (2*) hamilton) (map (3*) hamilton)) (map (5*) hamilton)
   where
     merge (a:x) (b:y) | a<b       = a : merge x (b:y)
@@ -46,3 +48,45 @@ manuelHamil x = apply (f) (mulHamil (1:manuelHamil x))
   where
     f = mergeGlob
     mulHamil = mapHamil x
+
+-- New Definitions
+
+-- Like mergesort's merge, joins 2 lists always putting up the lower first. Removes duplicates.
+nmerge :: [Int] -> [Int] -> [Int]
+nmerge xs [] = xs
+nmerge [] ys = ys
+nmerge (a:x) (b:y)
+  | a<b       = a : nmerge x (b:y)
+  | a>b       = b : nmerge (a:x) y
+  | otherwise = a : nmerge x y
+
+-- Apply a binary function over items a list sequentially
+napply :: (a -> a -> a) -> [a] -> a
+napply = foldr1
+
+-- Returns a list for every number in the first list multiplying the second
+nmult :: [Int] -> [Int] -> [[Int]]
+nmult mults nums = [ map (*m) nums | m <- mults ]
+
+-- Hamilton list for a list of numbers
+nhamil :: [Int] -> [Int]
+nhamil mults = napply nmerge (nmult mults [1..]) 
+
+-- Playing with factors
+
+ndivisors :: Int -> [Int]
+ndivisors n = [ d | d <- [2..n-1], n `mod` d == 0]
+
+nfactors :: Int -> [Int]
+nfactors num = if null divs then [num] else foldl1' nmerge $ map nfactors divs 
+  where
+    divs = ndivisors num
+
+data Optional a = Nada | Only a deriving (Eq, Show)
+
+instance Monoid a => Monoid (Optional a) where
+  mempty = mempty
+  Nada `mappend` Nada = Nada
+  Nada `mappend` Only b  = Only b
+  Only a  `mappend` Nada = Only a
+  Only a  `mappend` Only b  = Only $ a `mappend` b
